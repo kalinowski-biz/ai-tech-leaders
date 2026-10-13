@@ -1,0 +1,25 @@
+{
+  "name": "tripsalesagent",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @tripsalesagent/app dev",
+    "build": "pnpm --filter @tripsalesagent/app build",
+    "preview": "pnpm --filter @tripsalesagent/app preview",
+    "typecheck": "pnpm -r typecheck",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:migration:create": "pnpm --filter @tripsalesagent/database migration:create",
+    "db:migration:up": "pnpm --filter @tripsalesagent/database migration:up",
+    "db:migration:down": "pnpm --filter @tripsalesagent/database migration:down",
+    "db:migration:pending": "pnpm --filter @tripsalesagent/database migration:pending"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  }
+}

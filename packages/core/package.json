@@ -1,0 +1,15 @@
+{
+  "name": "@tripsalesagent/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc6 --noEmit"
+  },
+  "dependencies": {
+    "awilix": "^13.0.5"
+  }
+}

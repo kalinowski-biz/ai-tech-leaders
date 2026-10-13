@@ -4,6 +4,76 @@ Instructions for AI coding agents working in this repository. These rules are ma
 
 This project uses **Spec-Driven Development (SDD)**: work starts from a spec, every autonomous run is logged, and what we learn is written down. All of that lives in the `.ai/` folder.
 
+## Project: TripSalesAgent – technical assumptions
+
+**TripSalesAgent** is a web application built as a TypeScript monorepo. These assumptions are binding; do not swap a technology or bypass a convention without a spec that says so (see `README.md` for the architecture narrative).
+
+### Stack
+
+| Concern | Choice | Notes |
+| --- | --- | --- |
+| Framework | **Nuxt** (latest major, currently 4.x) + **Vue 3** + **TypeScript** | Strict TS. Use Composition API and `<script setup lang="ts">`. |
+| Database | **PostgreSQL** | Local dev DB via `docker-compose.yml` (`pnpm db:up`). |
+| ORM | **MikroORM** (v7, `@mikro-orm/postgresql`) | Migrations (`@mikro-orm/migrations`) and connection pooling are mandatory; schema changes **only** via migrations. |
+| DI container | **Awilix** | See "Dependency injection" below. |
+| Public pages CSS | **Tailwind CSS** (v4, `@tailwindcss/vite`) | Utility classes in templates; no custom CSS frameworks. |
+| Admin ("backend") pages UI | **shadcn-vue** (`shadcn-nuxt`, Reka UI) on top of Tailwind | Components live in `packages/app/app/components/ui` and are added with `pnpm dlx shadcn-vue@latest add <component>` (run in `packages/app`). |
+| Package manager | **pnpm** workspaces | Never use npm/yarn; never commit another lockfile. |
+| Runtime | Node.js >= 22 | |
+
+### Monorepo layout
+
+All sub-packages live in `packages/` and are named `@tripsalesagent/<name>`. Internal packages are consumed as **TypeScript sources** (`exports` -> `./src/index.ts`, no build step); the app transpiles/inlines them (see `packages/app/nuxt.config.ts`).
+
+| Package | Role | May depend on |
+| --- | --- | --- |
+| `packages/app` | **Integration package** – the Nuxt app (public pages, `/admin` pages, Nitro API). Owns the **composition root** (`server/utils/container.ts`) where all packages are wired together. | `core`, `database` |
+| `packages/core` | Framework-free domain/business logic: services and the **ports** (interfaces) they need. | `awilix` only (for `register*`) |
+| `packages/database` | MikroORM config, entities, migrations, pooling, `registerDatabase()`; implements ports from `core`. | `@mikro-orm/*`, `awilix` |
+
+Rules:
+- Dependency direction is `app -> core`, `app -> database`. `core` must **not** import `database` or `app`; it depends on ports, and `database` provides the adapters.
+- New package? Create `packages/<name>` with `@tripsalesagent/<name>`, a `typecheck` script and a `register<Name>(container)` function if it contributes services; wire it in the composition root only.
+- Domain logic never lives in Vue components or Nitro route handlers: handlers resolve a service from the request scope and delegate.
+
+### Dependency injection (Awilix)
+
+- One root container (`useRootContainer()`), created lazily in `packages/app/server/utils/container.ts`, `InjectionMode.PROXY`, `strict: true`. Dependencies are received as one destructured object: `constructor({ healthProbe }: Deps)`.
+- Packages expose `register*(container)` and a `*Cradle` interface; the app's `Cradle` type is the intersection of them. Packages never import the container from the app.
+- **Lifetimes:** infrastructure (ORM, config) = `SINGLETON`; anything holding per-request state (EntityManager fork, services using it) = `SCOPED`. Avoid `TRANSIENT` unless stateless and cheap.
+- **One scope per request:** in Nitro handlers get it with `useScope(event)` (created lazily, disposed on response close). Never share a scoped `EntityManager` across requests; never call `orm.em` directly in request code – use the scoped `em` (a `fork()`).
+- Resolve from the container only at the edges (route handlers, plugins). Do not use the container as a service locator inside services.
+
+### Database conventions
+
+- Config comes from environment variables (`DATABASE_URL`, `DATABASE_POOL_MIN`, `DATABASE_POOL_MAX`, `DATABASE_DEBUG`); document new variables in `.env.example`. Never commit `.env`.
+- Entities live in `packages/database/src/entities` and must be added to the registry in `entities/index.ts`.
+- Migrations: `pnpm db:migration:create` (add `--blank` for hand-written SQL), `pnpm db:migration:up|down|pending`. Commit generated migrations; never edit an applied migration – add a new one.
+
+### Frontend conventions
+
+- Public pages: `layouts/default.vue`, Tailwind utilities only. Admin pages: `definePageMeta({ layout: 'admin' })`, under `pages/admin/`, built from shadcn-vue components.
+- Do not hand-edit generated shadcn-vue components unless customizing deliberately; prefer composing them.
+
+### Commands
+
+```bash
+pnpm install                # install (runs `nuxt prepare`)
+pnpm dev                    # Nuxt dev server (reads the repo-root .env)
+pnpm build                  # production build
+pnpm typecheck              # tsc for packages + nuxt typecheck (vue-tsc) for the app
+pnpm db:up / db:down        # local PostgreSQL via docker compose
+pnpm db:migration:create | up | down | pending
+```
+
+A change is not done until `pnpm typecheck` and `pnpm build` pass.
+
+### Known constraints
+
+- **TypeScript is 6.x via an alias**: the root `package.json` has `"typescript": "npm:@typescript/typescript6@^6"`, because `vue-tsc` (used by `nuxt typecheck`) does not work with TypeScript 7 yet. That package ships the binary as `tsc6` (not `tsc`), so package scripts use `tsc6 --noEmit`. Do not move to TypeScript 7 until `vue-tsc` supports it and `pnpm typecheck` passes.
+- The MikroORM CLI needs an explicit TypeScript loader; the scripts set `MIKRO_ORM_CLI_TS_LOADER=tsx`.
+- The ORM is created synchronously and connects lazily, so the app boots without a database and `/api/health` reports `degraded` (HTTP 503).
+
 ## The `.ai/` structure
 
 ```
