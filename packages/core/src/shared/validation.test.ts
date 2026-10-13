@@ -7,6 +7,8 @@ describe('field schemas', () => {
   it('validates the NIP checksum', () => {
     expect(isValidNip('7251234567')).toBe(false)
     expect(isValidNip('5260250274')).toBe(true)
+    expect(isValidNip('526025027')).toBe(false)
+    expect(isValidNip('52602502a4')).toBe(false)
     expect(nipSchema.parse('526-025-02-74')).toBe('5260250274')
   })
 

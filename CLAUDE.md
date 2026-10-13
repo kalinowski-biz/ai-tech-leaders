@@ -11,4 +11,5 @@ The file above is the single source of truth for the `.ai/` metadata structure (
 - **After fixing a bug or learning something non-obvious:** write `.ai/lessons/YYYY-MM-DD-slug.md` and add it to the index in `.ai/lessons.md`. This is the project's long-term memory – prefer it over Claude Code's private auto-memory for anything that is useful to other agents or teammates.
 - **Specs:** active in `.ai/specs/`, finished in `.ai/specs/implemented/`, dead in `.ai/specs/archive/`. Move with `git mv`; never rename.
 - **File naming:** always `YYYY-MM-DD-slug.md`; get the date from `date +%F`.
+- **Tests:** every feature keeps unit coverage at 100 % (`pnpm test:coverage`) and every page/flow gets an agent-browser e2e test (`pnpm test:integration`); see "Testing (mandatory)" in `AGENTS.md`. CI runs both on every PR.
 - When delegating to subagents, tell them to follow these rules and to report lessons back, or write them yourself.

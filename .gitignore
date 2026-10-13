@@ -24,3 +24,6 @@ logs
 !.env.example
 
 local/
+# Test output
+coverage
+test-results

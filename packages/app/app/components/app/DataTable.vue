@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="TRow">
 import {
   FlexRender,
+  functionalUpdate,
   getCoreRowModel,
   getSortedRowModel,
   useVueTable,
@@ -15,7 +16,7 @@ import type { ApiError } from '~/utils/api-error'
 /**
  * Every list screen renders through this component: column config in, with the
  * shared loading / error / empty / filtered-empty states and client-side
- * sorting. Rows are clickable when a `rowClick` listener is attached.
+ * sorting. Rows are clickable when a `@row-click` listener is attached.
  */
 const props = defineProps<{
   // TanStack column value types differ per column; `any` is its documented idiom here.
@@ -30,11 +31,15 @@ const props = defineProps<{
   filtered?: boolean
   /** Visually emphasized rows, e.g. inquiries with unread events. */
   isHighlighted?: (row: TRow) => boolean
+  /**
+   * `@row-click` listener. A prop rather than an emit because its presence
+   * styles the rows: Vue keeps listeners of declared emits out of `attrs`.
+   */
+  onRowClick?: (row: TRow) => void
 }>()
 
-const emit = defineEmits<{ retry: []; clearFilters: []; rowClick: [row: TRow] }>()
-const attrs = useAttrs()
-const clickable = computed(() => 'onRowClick' in attrs)
+const emit = defineEmits<{ retry: []; clearFilters: [] }>()
+const clickable = computed(() => props.onRowClick !== undefined)
 
 const sorting = ref<SortingState>([])
 const table = useVueTable({
@@ -50,7 +55,7 @@ const table = useVueTable({
     },
   },
   onSortingChange: (updater) => {
-    sorting.value = typeof updater === 'function' ? updater(sorting.value) : updater
+    sorting.value = functionalUpdate(updater, sorting.value)
   },
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
@@ -115,7 +120,7 @@ const refreshing = computed(() => props.status === 'pending' && hasRows.value)
           v-for="row in table.getRowModel().rows"
           :key="row.id"
           :class="[clickable && 'cursor-pointer', isHighlighted?.(row.original) && 'font-semibold']"
-          @click="emit('rowClick', row.original)"
+          @click="onRowClick?.(row.original)"
         >
           <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
             <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />

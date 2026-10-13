@@ -19,7 +19,10 @@ This project uses **Spec-Driven Development (SDD)**: work starts from a spec, ev
 | Public pages CSS | **Tailwind CSS** (v4, `@tailwindcss/vite`) | Utility classes in templates; no custom CSS frameworks. |
 | Panel pages UI (agent and office zones) | **shadcn-vue** (`shadcn-nuxt`, Reka UI) on top of Tailwind | Components live in `packages/app/app/components/ui` and are added with `pnpm dlx shadcn-vue@latest add <component>` (run in `packages/app`); check `package.json` afterwards – the CLI may add or downgrade dependencies. |
 | Validation | **zod 4** | Schemas live in `core` and are shared by Nitro handlers and forms (vee-validate via `toFormSchema`). |
-| Quality tooling | **ESLint** (`@nuxt/eslint-config`, flat), **Prettier**, **Vitest** | ESLint enforces package boundaries; Markdown is not auto-formatted. |
+| Quality tooling | **ESLint** (`@nuxt/eslint-config`, flat), **Prettier**, **Vitest** (+ `@vitest/coverage-v8`) | ESLint enforces package boundaries; Markdown is not auto-formatted. |
+| Unit testing | **Vitest** + **`@nuxt/test-utils`** (`@vue/test-utils`, happy-dom) | **100 % coverage gate** – see "Testing" below. |
+| Integration testing | **Testcontainers** (`@testcontainers/postgresql`) + **agent-browser** | Ephemeral PostgreSQL + the production build driven in a headless browser. |
+| CI | **GitHub Actions** (`.github/workflows/ci.yml`) | Every PR: lint, typecheck, unit tests with coverage gate, build, integration tests. |
 | Package manager | **pnpm** workspaces | Never use npm/yarn; never commit another lockfile. |
 | Runtime | Node.js >= 22 | |
 
@@ -94,6 +97,16 @@ Never re-implement these inline:
 - Colors, fonts and radii come from the theme tokens in `app/assets/css/tailwind.css` (mockup direction "zeszyt i bilet"); no hex values or custom CSS classes in components.
 - Do not hand-edit generated shadcn-vue components unless customizing deliberately; prefer composing them.
 
+### Testing (mandatory)
+
+- **Every new feature or behavior change ships with unit tests that keep coverage at 100 %** – statements, branches, functions and lines, for every hand-written source file in `core`, `database` and `app` (`app/`, `server/`, `shared/`, including `.vue` files). `pnpm test:coverage` enforces the thresholds in `vitest.config.ts` and fails the build otherwise. Only generated shadcn-vue primitives (`components/ui/**`), type declarations and tests are excluded.
+- Do **not** lower the thresholds, widen the coverage `exclude` list or add `/* v8 ignore */` comments to get green. A branch you cannot reach from a test is dead code – remove or simplify it (e.g. let a library helper own the branch). A coverage exception needs a spec that says why.
+- Tests assert behavior (inputs → outputs, rendered text, emitted events, HTTP status/body), not implementation details; a test must fail without the change it covers. Bug fixes ship a regression test.
+- **Where tests go:** `<file>.test.ts` next to the code runs in plain Node (core, database, server utilities, pure client utilities); `<file>.nuxt.test.ts` next to components, composables, layouts and pages runs inside the Nuxt runtime (`mountSuspended`, `mockNuxtImport`, `registerEndpoint` from `@nuxt/test-utils/runtime`; `withSetup` in `packages/app/test/helpers/harness.ts` for composables). Shared test helpers live in `packages/<pkg>/test/`, never in auto-imported folders.
+- **Unit tests never need Docker, a database or a browser.** Anything that does is an integration test.
+- **Integration tests** (`pnpm test:integration`, config `vitest.integration.config.ts`): `packages/database/test/**` runs against an ephemeral PostgreSQL (Testcontainers, `postgres:17-alpine`); `packages/app/test/e2e/**` starts the **production build** against that database and drives it with **agent-browser** through the `Browser` wrapper (`packages/app/test/e2e/support/browser.ts`, one isolated session per file via `useBrowser()`). Every new page or user-visible flow gets an e2e test; every new repository/migration gets a database integration test. Without Docker, set `TEST_DATABASE_URL` to a disposable database.
+- **CI** (`.github/workflows/ci.yml`) runs on every pull request: Lint (+ format), Typecheck, Unit tests (coverage gate), Build, Integration tests. A PR is mergeable only when all jobs are green; never skip or disable a job to merge.
+
 ### Commands
 
 ```bash
@@ -103,19 +116,24 @@ pnpm build                  # production build
 pnpm typecheck              # tsc for packages + nuxt typecheck (vue-tsc) for the app
 pnpm lint / lint:fix        # ESLint (incl. package boundaries)
 pnpm format / format:check  # Prettier
-pnpm test / test:watch      # Vitest (projects: core, database, app)
-pnpm check                  # lint + format:check + typecheck + test + build
+pnpm test / test:watch      # Vitest unit tests (projects: core, database, app, app-nuxt)
+pnpm test:coverage          # unit tests + 100 % coverage gate (report in coverage/)
+pnpm test:integration       # build + integration tests (Docker: Testcontainers; browser: agent-browser)
+pnpm test:integration:run   # integration tests against the existing build
+pnpm check                  # lint + format:check + typecheck + test:coverage + build
 pnpm db:up / db:down        # local PostgreSQL via docker compose
 pnpm db:migration:create | up | down | pending
 ```
 
-A change is not done until `pnpm check` passes.
+A change is not done until `pnpm check` passes (and `pnpm test:integration` when it touches pages, API handlers or the database) – CI runs both.
 
 ### Known constraints
 
 - **TypeScript is 6.x via an alias**: the root `package.json` has `"typescript": "npm:@typescript/typescript6@^6"`, because `vue-tsc` (used by `nuxt typecheck`) does not work with TypeScript 7 yet. That package ships the binary as `tsc6` (not `tsc`), so package scripts use `tsc6 --noEmit`. Do not move to TypeScript 7 until `vue-tsc` supports it and `pnpm typecheck` passes.
 - The MikroORM CLI needs an explicit TypeScript loader; the scripts set `MIKRO_ORM_CLI_TS_LOADER=tsx`.
 - The ORM is created synchronously and connects lazily, so the app boots without a database and `/api/v1/health` answers 503 `{ code: 'DATABASE_UNAVAILABLE' }`.
+- The `app-nuxt` Vitest project must be rooted at `packages/app` (`root` in `vitest.config.ts`), otherwise Vite cannot resolve Nuxt's runtime entry.
+- agent-browser runs the system Chrome when present; otherwise run `pnpm exec agent-browser install` once (CI does `--with-deps`).
 
 ## The `.ai/` structure
 

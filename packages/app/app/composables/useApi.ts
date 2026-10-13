@@ -46,7 +46,8 @@ function parseVersionTag(etag: string | null): number | null {
  * is Nitro's `event.$fetch`, which has no `.raw` for reading the `ETag`.
  */
 export function useApi() {
-  const forwardedHeaders = import.meta.server ? useRequestHeaders(['cookie']) : {}
+  // During SSR forwards the browser's session cookie; on the client it is `{}`.
+  const forwardedHeaders = useRequestHeaders(['cookie'])
   const fetchApi = $fetch as unknown as UntypedFetch
 
   function toFetchOptions({ method = 'GET', body, query, version }: ApiRequestOptions): FetchOptions {

@@ -67,8 +67,10 @@ Status codes are exactly those in `01` §4 (`NEW`, `QUOTING`, `QUOTE_READY`, …
 | Screen ID | the `01` ID in a comment at the top of every page/modal | `<!-- A-06 Karta zapytania (agent) -->` |
 | Component | PascalCase file; Nuxt prefixes the folder path, so choose names that read well | `components/inquiries/StatusBadge.vue` → `<InquiriesStatusBadge>` |
 | Composable | `useXxx`, `app/composables/` | `useApi`, `useMutation` |
-| Unit test | `<file>.test.ts` next to the code | `inquiry-state-machine.test.ts` |
+| Unit test | `<file>.test.ts` next to the code (plain Node) | `inquiry-state-machine.test.ts` |
+| Nuxt unit test | `<file>.nuxt.test.ts` next to a component/composable/page (Nuxt runtime) | `components/app/DataTable.nuxt.test.ts` |
 | Integration test | `packages/<pkg>/test/**/*.test.ts` | `database/test/inquiry-repository.test.ts` |
+| E2E test | `packages/app/test/e2e/<screen-or-flow>.test.ts` | `test/e2e/admin-panel.test.ts` |
 
 ---
 
@@ -338,23 +340,28 @@ When two principles pull in different directions, prefer the one that keeps the 
 
 ### 8.2 Tests (Vitest)
 
-| Layer | What | Where |
-| --- | --- | --- |
-| `core` unit | every state-machine row (allowed and rejected), money and commission (incl. `00` §6: 5 % × 23 140 zł = 1 157 zł; 5 % × 24 030 zł = 1 201,50 zł), validators, expiry with `FixedClock` | next to the code |
-| `database` integration | against a real PostgreSQL: optimistic locking, inquiry-number counter under concurrency, agent-isolation queries, migrations apply | `packages/database/test/` |
-| API | per handler: 401/403/404 (ownership), 422, 409, 428 | `packages/app/server/**` |
-| client utilities | formatters against every `02` §1.4 example, error mapping, form adapter | next to the code |
-| E2E (later) | path P1 once it exists (Playwright) | – |
+**Every feature ships with unit tests that keep coverage at 100 %** (statements, branches, functions, lines) across all hand-written source in `core`, `database` and `app`, `.vue` files included. The gate is enforced by `pnpm test:coverage` and CI. Excluded only: generated `components/ui/**`, `.d.ts`, tests. Never lower thresholds, extend excludes or add `v8 ignore` comments – a branch no test can reach is dead code to remove or simplify.
 
-A behavior change ships with a test that fails without it; a bug fix ships a regression test.
+| Layer | What | Where | Runs in |
+| --- | --- | --- | --- |
+| `core` unit | every state-machine row (allowed and rejected), money and commission (incl. `00` §6: 5 % × 23 140 zł = 1 157 zł; 5 % × 24 030 zł = 1 201,50 zł), validators, expiry with `FixedClock` | next to the code | `pnpm test` (node) |
+| `database` unit | config, container wiring, adapters with a stubbed connection | next to the code | `pnpm test` (node) |
+| API / server unit | per handler: 401/403/404 (ownership), 422, 409, 428; middleware, utilities (fake h3 events: `packages/app/test/helpers/h3-event.ts`) | next to the code | `pnpm test` (node) |
+| client utilities | formatters against every `02` §1.4 example, error mapping, form adapter | next to the code | `pnpm test` (node) |
+| components, composables, layouts, pages | rendering of every state, emitted events, API calls via `registerEndpoint`, Nuxt imports via `mockNuxtImport` | `*.nuxt.test.ts` next to the code | `pnpm test` (`app-nuxt`) |
+| `database` integration | against a real PostgreSQL (Testcontainers): optimistic locking, inquiry-number counter under concurrency, agent-isolation queries, migrations apply | `packages/database/test/` | `pnpm test:integration` |
+| E2E | production build + Testcontainers PostgreSQL, driven by **agent-browser** (`Browser` wrapper, `useBrowser()` fixture); every page/flow, incl. path P1 once it exists | `packages/app/test/e2e/` | `pnpm test:integration` |
+
+A behavior change ships with a test that fails without it; a bug fix ships a regression test. Unit tests never need Docker, a database or a browser.
 
 ### 8.3 Quality gate
 
 ```bash
-pnpm check   # lint + format:check + typecheck + test + build
+pnpm check              # lint + format:check + typecheck + test:coverage + build
+pnpm test:integration   # build + database and browser integration tests (needs Docker)
 ```
 
-A change is not done until `pnpm check` passes.
+A change is not done until `pnpm check` passes, plus `pnpm test:integration` when it touches pages, API handlers or the database. CI (`.github/workflows/ci.yml`) runs all of it on every pull request – jobs Lint, Typecheck, Unit tests, Build, Integration tests – and a PR merges only when every job is green.
 
 ### 8.4 Review checklist
 
@@ -386,7 +393,7 @@ A change is not done until `pnpm check` passes.
 
 **Correctness & tests**
 
-- [ ] Tests from §8.2 for the touched layer exist and fail without the change.
+- [ ] Tests from §8.2 for the touched layer exist and fail without the change; coverage stays at 100 % without new excludes. *(blocker)*
 - [ ] Concurrent/idempotent cases (double accept, version conflict) are tested where the flow allows retries.
 
 ---
@@ -399,8 +406,8 @@ Example: "add clients" (UC-A3, screens A-07, A-08, M-A1).
 2. **Core** (`packages/core/src/clients/`): `client.schema.ts` (create/update schemas reusing `phoneSchema`, `emailSchema`), `client-repository.port.ts`, `client.service.ts` (receives `actor`, enforces ownership, throws domain errors). Register the service in `registerCore` (`SCOPED`) and extend `CoreCradle`/`CoreRequiredCradle`. If forms need the schemas, add a subpath export (`"./clients/schemas"`). Unit tests.
 3. **Database** (`packages/database/src/`): `entities/clients/client.entity.ts` (`defineEntity`, `version`), add it to `entities/index.ts`; `repositories/clients/mikro-orm-client-repository.ts`; register it in `registerDatabase` (`SCOPED`); `pnpm db:migration:create`; integration tests.
 4. **API** (`packages/app/server/api/v1/clients/`): one file per endpoint of `01` §5.4 (`index.get.ts`, `index.post.ts`, `[clientId].get.ts`, `[clientId].patch.ts`, `[clientId].delete.ts`), each built as in §3.
-5. **UI:** pages under `pages/agent/klienci/` with `definePageMeta({ layout: 'agent' })` and the screen ID comment; data via `useApiQuery`, lists via `AppDataTable`, forms via `useApiForm` with the shared schema, mutations via `useMutation`; concept components in `components/clients/`; new error codes in `utils/messages.ts`.
+5. **UI:** pages under `pages/agent/klienci/` with `definePageMeta({ layout: 'agent' })` and the screen ID comment; data via `useApiQuery`, lists via `AppDataTable`, forms via `useApiForm` with the shared schema, mutations via `useMutation`; concept components in `components/clients/`; new error codes in `utils/messages.ts`. `*.nuxt.test.ts` for every page/component; an e2e test in `packages/app/test/e2e/clients.test.ts`.
 6. **Never** create `modules/<concept>/`, per-concept setup/ACL files or auto-discovery.
-7. **Done:** `pnpm check` green; run log finalized; lessons written; spec moved to `implemented/`.
+7. **Done:** `pnpm check` (100 % coverage) and `pnpm test:integration` green, CI green; run log finalized; lessons written; spec moved to `implemented/`.
 
 The first concepts should be **auth + clients** – the reference vertical slice every later concept copies.

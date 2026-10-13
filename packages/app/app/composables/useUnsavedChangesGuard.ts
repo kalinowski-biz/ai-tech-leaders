@@ -20,7 +20,8 @@ export function useUnsavedChangesGuard(isDirty: MaybeRefOrGetter<boolean>) {
 
   onBeforeRouteLeave(() => confirmDiscard())
 
-  useEventListener(import.meta.client ? window : undefined, 'beforeunload', (event: BeforeUnloadEvent) => {
+  // Targets `window` in the browser and is a no-op during SSR.
+  useEventListener('beforeunload', (event) => {
     if (toValue(isDirty)) event.preventDefault()
   })
 

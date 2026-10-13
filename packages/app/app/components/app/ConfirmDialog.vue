@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -9,27 +8,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 
-/** Renders the request from `useConfirm()`; mounted once in `app.vue`. */
+/**
+ * Renders the request from `useConfirm()`; mounted once in `app.vue`.
+ * Any way of closing (Cancel, Escape) answers `false`. The confirm button is a
+ * plain `Button`, not `AlertDialogAction`: the latter closes the dialog before
+ * its `@click` runs, which would answer `false` first.
+ */
 const { current, settle } = useConfirmDialogState()
-
-function onOpenChange(open: boolean): void {
-  if (!open) settle(false)
-}
 </script>
 
 <template>
-  <AlertDialog :open="current !== null" @update:open="onOpenChange">
+  <!-- No trigger: the only open-state change the dialog can request is closing. -->
+  <AlertDialog :open="current !== null" @update:open="settle(false)">
     <AlertDialogContent v-if="current">
       <AlertDialogHeader>
         <AlertDialogTitle>{{ current.title }}</AlertDialogTitle>
         <AlertDialogDescription v-if="current.description">{{ current.description }}</AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel @click="settle(false)">{{ current.cancelLabel ?? 'Anuluj' }}</AlertDialogCancel>
-        <AlertDialogAction :variant="current.destructive ? 'destructive' : 'default'" @click="settle(true)">
+        <AlertDialogCancel>{{ current.cancelLabel ?? 'Anuluj' }}</AlertDialogCancel>
+        <Button :variant="current.destructive ? 'destructive' : 'default'" @click="settle(true)">
           {{ current.confirmLabel }}
-        </AlertDialogAction>
+        </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

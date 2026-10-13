@@ -20,6 +20,8 @@ describe('formatters (02-specyfikacja-ekranow.md §1.4)', () => {
     expect(plain(formatMoney(120_150, { compact: true }))).toBe('1 201,50 zł')
     expect(plain(formatMoney(5))).toBe('0,05 zł')
     expect(plain(formatMoney(123_456_789))).toBe('1 234 567,89 zł')
+    expect(plain(formatMoney(-120_150))).toBe('-1 201,50 zł')
+    expect(plain(formatMoney(0))).toBe('0,00 zł')
   })
 
   it('uses non-breaking spaces so amounts never wrap', () => {
@@ -33,9 +35,15 @@ describe('formatters (02-specyfikacja-ekranow.md §1.4)', () => {
     expect(formatDateRange('2026-12-30', '2027-01-02')).toBe('30.12.2026–02.01.2027')
   })
 
+  it('rejects dates that are not YYYY-MM-DD', () => {
+    expect(() => formatDate('13.05.2027')).toThrow(RangeError)
+    expect(() => formatDateRange('2027-05-13', 'tomorrow')).toThrow(RangeError)
+  })
+
   it('formats date-time in Warsaw time', () => {
     expect(formatDateTime('2026-11-02T13:05:00Z')).toBe('02.11.2026, 14:05')
     expect(formatDateTime('2027-05-13T06:00:00Z')).toBe('13.05.2027, 08:00')
+    expect(formatDateTime(new Date('2026-12-31T23:30:00Z'))).toBe('01.01.2027, 00:30')
   })
 
   it('formats the relative age of an inquiry', () => {
@@ -50,6 +58,7 @@ describe('formatters (02-specyfikacja-ekranow.md §1.4)', () => {
   it('formats phone, NIP and commission rate', () => {
     expect(formatPhone('+48601234567')).toBe('+48 601 234 567')
     expect(formatPhone('601234567')).toBe('+48 601 234 567')
+    expect(formatPhone('+49 30 1234567')).toBe('+49 30 1234567')
     expect(formatNip('725-123-45-67')).toBe('7251234567')
     expect(formatRate(500)).toBe('5%')
     expect(formatRate(750)).toBe('7,5%')

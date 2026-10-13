@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { businessDaysUntil, FixedClock, isBusinessDatePast, toBusinessDate } from './clock.ts'
+import { businessDaysUntil, FixedClock, isBusinessDatePast, systemClock, toBusinessDate } from './clock.ts'
+
+describe('clocks', () => {
+  it('systemClock returns the current instant', () => {
+    const before = Date.now()
+    const now = systemClock.now().getTime()
+    expect(now).toBeGreaterThanOrEqual(before)
+    expect(now).toBeLessThanOrEqual(Date.now())
+  })
+
+  it('FixedClock hands out copies, so callers cannot move it', () => {
+    const clock = new FixedClock(new Date('2026-10-13T08:00:00Z'))
+    clock.now().setFullYear(2000)
+    expect(clock.now().toISOString()).toBe('2026-10-13T08:00:00.000Z')
+  })
+})
 
 describe('business dates (Europe/Warsaw)', () => {
   it('uses the Warsaw calendar day, not UTC', () => {

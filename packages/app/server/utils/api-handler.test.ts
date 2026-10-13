@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createError, createEvent, type H3Error } from 'h3'
-import { IncomingMessage, ServerResponse } from 'node:http'
-import { Socket } from 'node:net'
+import { createError, type H3Error } from 'h3'
 import {
   NotFoundError,
   RuleConflictError,
@@ -9,18 +7,29 @@ import {
   ValidationError,
   VersionConflictError,
 } from '@tripsalesagent/core'
-import { toHttpError } from './api-handler'
-
-function fakeEvent() {
-  const req = new IncomingMessage(new Socket())
-  req.method = 'POST'
-  req.url = '/api/v1/inquiries/42/take-over'
-  return createEvent(req, new ServerResponse(req))
-}
+import { fakeEvent } from '../../test/helpers/h3-event'
+import { defineApiHandler, toHttpError } from './api-handler'
 
 function map(error: unknown): H3Error {
-  return toHttpError(fakeEvent(), error) as H3Error
+  return toHttpError(fakeEvent({ method: 'POST', url: '/api/v1/inquiries/42/take-over' }), error) as H3Error
 }
+
+describe('defineApiHandler', () => {
+  it('returns the handler result', async () => {
+    const handler = defineApiHandler(async () => ({ ok: true }))
+    await expect(handler(fakeEvent())).resolves.toEqual({ ok: true })
+  })
+
+  it('maps thrown domain errors to HTTP errors', async () => {
+    const handler = defineApiHandler(() => {
+      throw new NotFoundError('Client')
+    })
+    await expect(handler(fakeEvent())).rejects.toMatchObject({
+      statusCode: 404,
+      data: { code: 'CLIENT_NOT_FOUND', message: 'Client not found.' },
+    })
+  })
+})
 
 describe('toHttpError', () => {
   it.each([

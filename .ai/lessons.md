@@ -13,11 +13,18 @@ Detailed entries live in [`lessons/`](lessons/) as `YYYY-MM-DD-slug.md`. When yo
 - After `shadcn-vue add`, check `git diff packages/app/package.json` – the CLI downgraded zod 4 → 3; forms use `toFormSchema`, not `@vee-validate/zod`.
 - Import the app's `shared/` folder only as `#shared/...` – relative paths break the Nitro build.
 - API calls go through `useApi` (global `$fetch` + forwarded cookie); `useRequestFetch()` has no `.raw` on the server.
-- Docker is not usable in this WSL setup (no daemon, no `docker compose` plugin); verify DB features against a throwaway local PostgreSQL (`/usr/lib/postgresql/14/bin`) instead.
+- Docker availability in the WSL setup varies: on 2026-10-13 it first had no daemon, later `docker ps` worked and Testcontainers ran. Check `docker ps` first; without Docker run integration tests with `TEST_DATABASE_URL` pointing at a throwaway local PostgreSQL (`/usr/lib/postgresql/14/bin`).
+- Every feature keeps unit coverage at 100 % – simplify unreachable branches instead of excluding them; Nuxt component tests are `*.nuxt.test.ts` (see the gotchas lesson).
+- reka `AlertDialogAction`/`DialogClose` closes before your `@click`; declared emits never show up in `useAttrs()`.
 
 ## Index
 
 <!-- Format: - [Title](lessons/YYYY-MM-DD-slug.md) – one-sentence takeaway -->
+
+- [Unit-testing Nuxt components and composables: gotchas](lessons/2026-10-13-nuxt-unit-test-gotchas.md) – `$fetch` retries GET on 503, `useAsyncData` caches per key, auto-unmount, and how to keep `.vue` branch coverage reachable.
+- [reka-ui `AlertDialogAction` closes the dialog before your `@click`](lessons/2026-10-13-reka-dialog-close-runs-before-click.md) – every `useConfirm()` resolved `false`; decide the outcome with a plain `Button`.
+- [Listeners of declared emits never appear in `useAttrs()`](lessons/2026-10-13-declared-emits-not-in-attrs.md) – make an optional `onX` prop when rendering depends on a listener being attached.
+- [The Nuxt Vitest project must be rooted at the app](lessons/2026-10-13-nuxt-vitest-project-root.md) – set `root: packages/app` next to `environmentOptions.nuxt.rootDir`, or Nuxt's runtime entry fails to resolve.
 
 - [shadcn-vue CLI can silently change dependencies](lessons/2026-10-13-shadcn-cli-changes-dependencies.md) – `add form` replaced zod 4 with zod 3 for `@vee-validate/zod`; diff `package.json` after every add.
 - [Import `packages/app/shared` via `#shared`](lessons/2026-10-13-nuxt-shared-dir-use-alias.md) – a relative value import of `shared/` breaks `pnpm build` while typecheck and tests pass.
