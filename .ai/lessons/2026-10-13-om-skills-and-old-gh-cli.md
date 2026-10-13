@@ -17,4 +17,5 @@
 
 - After installing or updating skills, restart Claude Code before using them.
 - `.ai/trackers/github.md` creates labels via `gh api -X POST repos/{owner}/{repo}/labels` (patched locally); keep it that way.
+- `apply_label` in the descriptor uses `gh api ... -f "labels[]=x"`; gh 2.4.0 sends that as a literal key and GitHub answers 422 (`"labels[]" is not a permitted key`). On old gh pass JSON instead: `echo '{"labels":["x"]}' | gh api -X POST repos/{owner}/{repo}/issues/{n}/labels --input -` (found while opening PR #4).
 - Upgrade `gh` from GitHub's apt repo (https://github.com/cli/cli/blob/trunk/docs/install_linux.md) before running pipeline skills that read issues/PRs; distro packages lag years behind.
