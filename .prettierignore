@@ -5,6 +5,8 @@ node_modules
 pnpm-lock.yaml
 local
 .ai/mockups
+# Vendored OM skills (synced from upstream by om-apply-upgrade-notes); keep byte-identical.
+.agents/skills
 packages/app/app/components/ui
 # Markdown (docs, specs, runs, lessons) is hand-formatted; past run logs must not be rewritten.
 *.md
