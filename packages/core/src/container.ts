@@ -1,8 +1,10 @@
-import { asClass, Lifetime, type AwilixContainer } from 'awilix'
+import { asClass, asValue, Lifetime, type AwilixContainer } from 'awilix'
 import { HealthService, type HealthProbe } from './health.ts'
+import { systemClock, type Clock } from './shared/clock.ts'
 
 /** Cradle entries contributed by this package. */
 export interface CoreCradle {
+  clock: Clock
   healthService: HealthService
 }
 
@@ -13,6 +15,7 @@ export interface CoreRequiredCradle {
 
 export function registerCore(container: AwilixContainer): void {
   container.register({
+    clock: asValue(systemClock),
     healthService: asClass(HealthService, { lifetime: Lifetime.SCOPED }),
   })
 }

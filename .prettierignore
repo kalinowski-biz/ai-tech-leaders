@@ -1,0 +1,10 @@
+.nuxt
+.output
+dist
+node_modules
+pnpm-lock.yaml
+local
+.ai/mockups
+packages/app/app/components/ui
+# Markdown (docs, specs, runs, lessons) is hand-formatted; past run logs must not be rewritten.
+*.md

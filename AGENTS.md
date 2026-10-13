@@ -6,7 +6,7 @@ This project uses **Spec-Driven Development (SDD)**: work starts from a spec, ev
 
 ## Project: TripSalesAgent – technical assumptions
 
-**TripSalesAgent** is a web application built as a TypeScript monorepo. These assumptions are binding; do not swap a technology or bypass a convention without a spec that says so (see `README.md` for the architecture narrative).
+**TripSalesAgent** is a web application built as a TypeScript monorepo: an agency sales portal for school trips (product: `.ai/mockups/2026-10-13-agency-sales-portal-mvp/`). These assumptions are binding; do not swap a technology or bypass a convention without a spec that says so (see `README.md` for the architecture narrative and **`docs/engineering-standards.md`** for the full coding standards and their rationale).
 
 ### Stack
 
@@ -17,7 +17,9 @@ This project uses **Spec-Driven Development (SDD)**: work starts from a spec, ev
 | ORM | **MikroORM** (v7, `@mikro-orm/postgresql`) | Migrations (`@mikro-orm/migrations`) and connection pooling are mandatory; schema changes **only** via migrations. |
 | DI container | **Awilix** | See "Dependency injection" below. |
 | Public pages CSS | **Tailwind CSS** (v4, `@tailwindcss/vite`) | Utility classes in templates; no custom CSS frameworks. |
-| Admin ("backend") pages UI | **shadcn-vue** (`shadcn-nuxt`, Reka UI) on top of Tailwind | Components live in `packages/app/app/components/ui` and are added with `pnpm dlx shadcn-vue@latest add <component>` (run in `packages/app`). |
+| Panel pages UI (agent and office zones) | **shadcn-vue** (`shadcn-nuxt`, Reka UI) on top of Tailwind | Components live in `packages/app/app/components/ui` and are added with `pnpm dlx shadcn-vue@latest add <component>` (run in `packages/app`); check `package.json` afterwards – the CLI may add or downgrade dependencies. |
+| Validation | **zod 4** | Schemas live in `core` and are shared by Nitro handlers and forms (vee-validate via `toFormSchema`). |
+| Quality tooling | **ESLint** (`@nuxt/eslint-config`, flat), **Prettier**, **Vitest** | ESLint enforces package boundaries; Markdown is not auto-formatted. |
 | Package manager | **pnpm** workspaces | Never use npm/yarn; never commit another lockfile. |
 | Runtime | Node.js >= 22 | |
 
@@ -27,14 +29,49 @@ All sub-packages live in `packages/` and are named `@tripsalesagent/<name>`. Int
 
 | Package | Role | May depend on |
 | --- | --- | --- |
-| `packages/app` | **Integration package** – the Nuxt app (public pages, `/admin` pages, Nitro API). Owns the **composition root** (`server/utils/container.ts`) where all packages are wired together. | `core`, `database` |
-| `packages/core` | Framework-free domain/business logic: services and the **ports** (interfaces) they need. | `awilix` only (for `register*`) |
+| `packages/app` | **Integration package** – the Nuxt app (public pages, agent and office panel pages, Nitro API). Owns the **composition root** (`server/utils/container.ts`) where all packages are wired together. | `core`, `database` |
+| `packages/core` | Framework-free domain/business logic: services and the **ports** (interfaces) they need. | `awilix` (for `register*`), `zod` |
 | `packages/database` | MikroORM config, entities, migrations, pooling, `registerDatabase()`; implements ports from `core`. | `@mikro-orm/*`, `awilix` |
 
 Rules:
 - Dependency direction is `app -> core`, `app -> database`. `core` must **not** import `database` or `app`; it depends on ports, and `database` provides the adapters.
 - New package? Create `packages/<name>` with `@tripsalesagent/<name>`, a `typecheck` script and a `register<Name>(container)` function if it contributes services; wire it in the composition root only.
 - Domain logic never lives in Vue components or Nitro route handlers: handlers resolve a service from the request scope and delegate.
+- Client code imports `core` only through awilix-free subpath exports (today `@tripsalesagent/core/shared`), never the package root.
+- These boundaries are enforced by `no-restricted-imports` in `eslint.config.mjs`; do not loosen them.
+
+### Domain concept convention
+
+Domain code is not organized into `modules/`. Each concept (`auth`, `agents`, `offers`, `clients`, `inquiries`, `commissions`, `reports`, `notifications`) is a same-named, plural, kebab-case folder repeated in the layers that need it:
+
+- `packages/core/src/<concept>/` – services, ports (incl. `<Entity>Repository`), zod schemas, state machines
+- `packages/database/src/entities/<concept>/<name>.entity.ts` (`defineEntity`) and `packages/database/src/repositories/<concept>/`
+- `packages/app/server/api/v1/<concept>/…/<name>.<method>.ts` (paths as in the API catalog, `01` §5)
+- `packages/app/app/components/<concept>/` and pages under the zone folders
+
+Create a concept folder only with its first file. Register every service/repository with an explicit line in `register*` (no auto-discovery). Identifiers are English, UI text Polish – use the glossary in `docs/engineering-standards.md` §1.1 (inquiry, quote, offer, client, commission, …). Put the screen ID from `01` (e.g. `<!-- A-06 … -->`) at the top of every page/modal.
+
+### Reusable server & client layer
+
+Never re-implement these inline:
+
+- **Server** (`packages/app/server/utils/`, auto-imported): every `/api/v1` handler is wrapped in `defineApiHandler` (maps `DomainError`s from `core/src/shared/errors.ts` to status + `{ code, message, fields? }`; no `try/catch` in handlers); `requireActor`/`requireRole`; input only via `readValidBody`/`getValidQuery`/`getValidParams` (zod → 422); `setVersionTag`/`requireIfMatch` for versioned resources; CSRF middleware in `server/middleware/csrf.ts`. Wire types in `shared/types/api.ts` – import as `#shared/types/api`, never by relative path.
+- **Client** (`packages/app/app/`): `useApi` is the only caller of `/api/v1` (ESLint forbids `$fetch`/`fetch`/`useFetch` elsewhere); `useApiQuery` for reads, `useMutation` for writes, `useApiForm` for forms (same zod schema as the server), `useConfirm`, `useUnsavedChangesGuard`; Polish texts in `utils/messages.ts`; formats only via `utils/format.ts`; lists via `<AppDataTable>`; states via `<AppLoadingSkeleton>`, `<AppEmptyState>`, `<AppErrorBanner>`; mutation buttons via `<AppActionButton>`.
+
+### Component placement
+
+1. shadcn primitive → `components/ui/` (CLI only, never hand-written).
+2. Generic, concept-agnostic building block → `components/app/` (flat; Nuxt names it `<App…>`).
+3. Tied to one concept's data → `components/<concept>/`.
+4. Used by one screen only → `components/<concept>/<screen>/`; promote when a second screen needs it. Never put non-route `.vue` files in `pages/`.
+
+### Money, time and state
+
+- Money is integer **grosze**, commission rates integer **basis points** (500 = 5 %); all arithmetic via `core/src/shared/money.ts` (`applyRate` rounds half up once). Amounts and commissions are computed server-side only.
+- No `new Date()`/`Date.now()` in `core` – inject `clock` (`FixedClock` in tests). Calendar dates are `YYYY-MM-DD` / `date`; business days are Europe/Warsaw.
+- Inquiry status changes only through the state-machine table in `core/src/inquiries/`; every transition writes a history entry in the same transaction.
+- Versioned resources: reads send `ETag`, mutations require `If-Match` (missing → 428, mismatch → 409 `VERSION_CONFLICT`).
+- An agent only ever sees its own clients/inquiries/commissions; someone else's record is 404.
 
 ### Dependency injection (Awilix)
 
@@ -52,7 +89,9 @@ Rules:
 
 ### Frontend conventions
 
-- Public pages: `layouts/default.vue`, Tailwind utilities only. Admin pages: `definePageMeta({ layout: 'admin' })`, under `pages/admin/`, built from shadcn-vue components.
+- Public pages (account `/logowanie`…, public quote `/w/{token}`): Tailwind utilities only, no panel menu.
+- Panel pages use the Polish routes from `01` §2: agent zone `pages/agent/**` with `definePageMeta({ layout: 'agent' })`, office zone `pages/biuro/**` with `definePageMeta({ layout: 'office' })`, built from shadcn-vue components. The demo `pages/admin/` (layout `admin`) is removed when the first zone page lands.
+- Colors, fonts and radii come from the theme tokens in `app/assets/css/tailwind.css` (mockup direction "zeszyt i bilet"); no hex values or custom CSS classes in components.
 - Do not hand-edit generated shadcn-vue components unless customizing deliberately; prefer composing them.
 
 ### Commands
@@ -62,17 +101,21 @@ pnpm install                # install (runs `nuxt prepare`)
 pnpm dev                    # Nuxt dev server (reads the repo-root .env)
 pnpm build                  # production build
 pnpm typecheck              # tsc for packages + nuxt typecheck (vue-tsc) for the app
+pnpm lint / lint:fix        # ESLint (incl. package boundaries)
+pnpm format / format:check  # Prettier
+pnpm test / test:watch      # Vitest (projects: core, database, app)
+pnpm check                  # lint + format:check + typecheck + test + build
 pnpm db:up / db:down        # local PostgreSQL via docker compose
 pnpm db:migration:create | up | down | pending
 ```
 
-A change is not done until `pnpm typecheck` and `pnpm build` pass.
+A change is not done until `pnpm check` passes.
 
 ### Known constraints
 
 - **TypeScript is 6.x via an alias**: the root `package.json` has `"typescript": "npm:@typescript/typescript6@^6"`, because `vue-tsc` (used by `nuxt typecheck`) does not work with TypeScript 7 yet. That package ships the binary as `tsc6` (not `tsc`), so package scripts use `tsc6 --noEmit`. Do not move to TypeScript 7 until `vue-tsc` supports it and `pnpm typecheck` passes.
 - The MikroORM CLI needs an explicit TypeScript loader; the scripts set `MIKRO_ORM_CLI_TS_LOADER=tsx`.
-- The ORM is created synchronously and connects lazily, so the app boots without a database and `/api/health` reports `degraded` (HTTP 503).
+- The ORM is created synchronously and connects lazily, so the app boots without a database and `/api/v1/health` answers 503 `{ code: 'DATABASE_UNAVAILABLE' }`.
 
 ## The `.ai/` structure
 

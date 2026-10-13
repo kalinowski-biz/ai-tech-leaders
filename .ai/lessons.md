@@ -10,11 +10,18 @@ Detailed entries live in [`lessons/`](lessons/) as `YYYY-MM-DD-slug.md`. When yo
 
 - TypeScript must be the `@typescript/typescript6` alias (binary `tsc6`) – `vue-tsc` (nuxt typecheck) breaks on TS 7.
 - MikroORM CLI scripts need `MIKRO_ORM_CLI_TS_LOADER=tsx`.
+- After `shadcn-vue add`, check `git diff packages/app/package.json` – the CLI downgraded zod 4 → 3; forms use `toFormSchema`, not `@vee-validate/zod`.
+- Import the app's `shared/` folder only as `#shared/...` – relative paths break the Nitro build.
+- API calls go through `useApi` (global `$fetch` + forwarded cookie); `useRequestFetch()` has no `.raw` on the server.
 - Docker is not usable in this WSL setup (no daemon, no `docker compose` plugin); verify DB features against a throwaway local PostgreSQL (`/usr/lib/postgresql/14/bin`) instead.
 
 ## Index
 
 <!-- Format: - [Title](lessons/YYYY-MM-DD-slug.md) – one-sentence takeaway -->
+
+- [shadcn-vue CLI can silently change dependencies](lessons/2026-10-13-shadcn-cli-changes-dependencies.md) – `add form` replaced zod 4 with zod 3 for `@vee-validate/zod`; diff `package.json` after every add.
+- [Import `packages/app/shared` via `#shared`](lessons/2026-10-13-nuxt-shared-dir-use-alias.md) – a relative value import of `shared/` breaks `pnpm build` while typecheck and tests pass.
+- [SSR fetch: no `.raw` on `useRequestFetch()`, typed `$fetch` on dynamic paths](lessons/2026-10-13-ssr-fetch-raw-and-typed-routes.md) – use the global `$fetch` via an untyped view + forwarded cookie; never map unknown errors to `NETWORK_ERROR`.
 
 - [MikroORM CLI needs an explicit TypeScript loader](lessons/2026-10-13-mikro-orm-cli-needs-ts-loader.md) – install `tsx` and set `MIKRO_ORM_CLI_TS_LOADER=tsx`, else `migration:up` fails with "MigrationClass is not a constructor".
 - [vue-tsc (nuxt typecheck) breaks with TypeScript 7](lessons/2026-10-13-vue-tsc-needs-typescript-5.md) – use `typescript` = `npm:@typescript/typescript6` (bin `tsc6`) until vue-tsc supports TS 7.

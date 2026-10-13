@@ -3,3 +3,8 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # Prebuilt native binary ships via optional deps; its postinstall is not needed.
+  unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - zod@4.6.7
