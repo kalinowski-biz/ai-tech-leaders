@@ -16,6 +16,7 @@ Detailed entries live in [`lessons/`](lessons/) as `YYYY-MM-DD-slug.md`. When yo
 - Docker availability in the WSL setup varies: on 2026-10-13 it first had no daemon, later `docker ps` worked and Testcontainers ran. Check `docker ps` first; without Docker run integration tests with `TEST_DATABASE_URL` pointing at a throwaway local PostgreSQL (`/usr/lib/postgresql/14/bin`).
 - Every feature keeps unit coverage at 100 % – simplify unreachable branches instead of excluding them; Nuxt component tests are `*.nuxt.test.ts` (see the gotchas lesson).
 - Incidental bugs outside the current change are filed via `om-prepare-issue`, not fixed in passing – most `om-*` implementation skills don't do this on their own (AGENTS.md principle 6).
+- Skills (`.claude/skills` -> `.agents/skills`) load at session start – restart Claude Code after installing them. Local `gh` must be >= 2.82.1 for the `om-*` pipeline.
 - reka `AlertDialogAction`/`DialogClose` closes before your `@click`; declared emits never show up in `useAttrs()`.
 
 ## Index
@@ -23,6 +24,7 @@ Detailed entries live in [`lessons/`](lessons/) as `YYYY-MM-DD-slug.md`. When yo
 <!-- Format: - [Title](lessons/YYYY-MM-DD-slug.md) – one-sentence takeaway -->
 
 - [om-* skills don't file incidental bugs found during implementation](lessons/2026-10-13-om-skills-incidental-bugs-not-filed.md) – only `om-auto-fix-pr`/`om-pr-autopilot` file deferred review findings; everything else drops them, so file them yourself via `om-prepare-issue`.
+- [om-* skills need a restart; local `gh` is too old](lessons/2026-10-13-om-skills-and-old-gh-cli.md) – skills installed mid-session appear only in a new Claude Code process; `gh 2.4` lacks `gh label`, use `gh api` and upgrade gh to >= 2.82.1.
 - [Unit-testing Nuxt components and composables: gotchas](lessons/2026-10-13-nuxt-unit-test-gotchas.md) – `$fetch` retries GET on 503, `useAsyncData` caches per key, auto-unmount, and how to keep `.vue` branch coverage reachable.
 - [reka-ui `AlertDialogAction` closes the dialog before your `@click`](lessons/2026-10-13-reka-dialog-close-runs-before-click.md) – every `useConfirm()` resolved `false`; decide the outcome with a plain `Button`.
 - [Listeners of declared emits never appear in `useAttrs()`](lessons/2026-10-13-declared-emits-not-in-attrs.md) – make an optional `onX` prop when rendering depends on a listener being attached.
