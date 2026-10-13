@@ -16,5 +16,5 @@ The user asked whether the `om-*` pipeline reports bugs found by the way, outsid
 
 ## What to do (or avoid) next time
 
-- Follow working principle 6 in `AGENTS.md`: file every incidental bug through `om-prepare-issue`, link it in the PR summary and the run log, and don't fix it in the current PR. If it breaks the gate, file it and mark the PR `blocked`.
+- Follow working principle 6 in `AGENTS.md`: file every incidental bug through `om-prepare-issue`, link it in the PR summary and the run log, and don't fix it in the current PR. If it breaks the gate, file it and report it as the PR's blocker in the summary comment; don't set `blocked` yourself – `SDLC.md` reserves that label for humans.
 - Don't patch the vendored skills locally (`skills-lock.json` hashes; they are overwritten on upgrade). Propose the gap upstream to `open-mercato/skills` instead.
