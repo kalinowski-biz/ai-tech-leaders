@@ -148,8 +148,9 @@ A change is not done until `pnpm check` passes (and `pnpm test:integration` when
 ├── runs/                       # Logs of autonomous AI runs
 │   └── YYYY-MM-DD-slug.md
 ├── lessons.md                  # Index + distilled long-term memory for LLMs
-└── lessons/                    # Detailed lesson entries
-    └── YYYY-MM-DD-slug.md
+├── lessons/                    # Detailed lesson entries
+│   └── YYYY-MM-DD-slug.md
+└── skills/<om-skill>/SKILL.md  # Repo-local extensions of the vendored om-* skills (not dated)
 ```
 
 ### Naming convention (applies to every file in `specs/`, `runs/`, `lessons/`)
