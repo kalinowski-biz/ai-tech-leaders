@@ -190,6 +190,7 @@ A change is not done until `pnpm check` passes (and `pnpm test:integration` when
 - **Every autonomous AI run** (a task you carry out with significant independence: multi-step implementation, refactor, investigation, spec execution) **must** produce exactly one log file in `.ai/runs/`.
 - Create the file at the **start** of the run and keep it updated as you go; finalize it at the end. Don't reconstruct it from memory afterwards.
 - Do not edit logs of past runs (other than finalizing your own). Corrections go in a new run or a lesson.
+- Exception: the `om-*` agent pipeline (`.ai/agentic.config.json`, process in `SDLC.md`) also writes run **folders** `.ai/runs/YYYY-MM-DD-slug/` (`PLAN.md`, `HANDOFF.md`, …). They follow the same naming rule and count as the run's log; don't add a second `.md` log for the same run.
 - Suggested run layout:
 
   ```markdown
