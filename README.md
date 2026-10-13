@@ -1,6 +1,6 @@
 # TripSalesAgent
 
-A web application for travel sales, built as a TypeScript monorepo on **Nuxt + Vue**, **PostgreSQL + MikroORM**, **Awilix** dependency injection, **Tailwind CSS** (public pages) and **shadcn-vue** (admin pages).
+A web application for travel sales, built as a TypeScript monorepo on **Nuxt + Vue**, **PostgreSQL + MikroORM**, **Awilix** dependency injection, **Tailwind CSS** (public pages) and **shadcn-vue** (agent and office panel pages). Coding standards: [`docs/engineering-standards.md`](docs/engineering-standards.md).
 
 > AI coding agents: read [`AGENTS.md`](AGENTS.md) first – it holds the binding technical assumptions and the spec-driven workflow (`.ai/`).
 
@@ -13,7 +13,7 @@ pnpm install
 cp .env.example .env          # adjust DATABASE_URL if you don't use docker-compose
 pnpm db:up                    # start local PostgreSQL
 pnpm db:migration:up          # apply migrations
-pnpm dev                      # http://localhost:3000  (admin: /admin, health: /api/health)
+pnpm dev                      # http://localhost:3000  (admin demo: /admin, health: /api/v1/health)
 ```
 
 | Script | What it does |
@@ -81,10 +81,10 @@ per request: useScope(event) → rootContainer.createScope()
 - Services take their dependencies as one destructured object, which keeps them testable without the container: `new HealthService({ healthProbe: fake })`.
 - Nitro's `close` hook disposes the root container, which closes the ORM and its pool.
 
-Example – a request through the stack (`GET /api/health`):
+Example – a request through the stack (`GET /api/v1/health`):
 
 ```
-server/api/health.get.ts → useScope(event).cradle.healthService
+server/api/v1/health.get.ts → defineApiHandler → useScope(event).cradle.healthService
   → HealthService.check()  →  healthProbe.ping()  →  em.getConnection().execute('select 1')
 ```
 
@@ -92,7 +92,7 @@ server/api/health.get.ts → useScope(event).cradle.healthService
 
 - **PostgreSQL** accessed through **MikroORM v7** (`@mikro-orm/postgresql`) with the `Migrator` extension.
 - **Connection pooling** is configured in `packages/database/src/config.ts` (`DATABASE_POOL_MIN` / `DATABASE_POOL_MAX`, defaults 2 / 10).
-- The ORM instance is created synchronously and connects **lazily**: the app starts without a database, and `/api/health` returns `503 {"status":"degraded"}` until PostgreSQL is reachable.
+- The ORM instance is created synchronously and connects **lazily**: the app starts without a database, and `/api/v1/health` returns `503 {"code":"DATABASE_UNAVAILABLE"}` (in h3's `data`) until PostgreSQL is reachable.
 - **Migrations** live in `packages/database/migrations` and are run through the MikroORM CLI (`mikro-orm.config.ts`, loaded with `tsx`). Schema changes happen only through committed migrations.
 - Entities are registered in `packages/database/src/entities/index.ts` (empty for now – the domain model is still to be designed).
 
@@ -100,8 +100,10 @@ server/api/health.get.ts → useScope(event).cradle.healthService
 
 | Area | Routes | Layout | Styling |
 | --- | --- | --- | --- |
-| Public | `/` | `layouts/default.vue` | Tailwind CSS utilities |
-| Admin ("backend") | `/admin/**` | `layouts/admin.vue` | shadcn-vue components (`app/components/ui`) + Tailwind theme tokens |
+| Public | `/`, account pages, public quote `/w/{token}` | `layouts/default.vue` | Tailwind CSS utilities |
+| Agent zone | `/agent/**` | `layouts/agent.vue` | shadcn-vue components (`app/components/ui`) + shared building blocks (`app/components/app`) |
+| Office zone | `/biuro/**` | `layouts/office.vue` | as above |
+| Admin demo (temporary) | `/admin` | `layouts/admin.vue` | removed when the first zone page lands |
 
 Tailwind v4 is wired through the `@tailwindcss/vite` plugin (`app/assets/css/tailwind.css`); shadcn-vue is added with `shadcn-nuxt` and its design tokens live in the same stylesheet.
 
@@ -109,6 +111,7 @@ Tailwind v4 is wired through the `@tailwindcss/vite` plugin (`app/assets/css/tai
 
 - One `.env` at the **repo root** serves both the Nuxt app (`nuxt dev --dotenv ../../.env`) and the MikroORM CLI. In production, provide real environment variables.
 - TypeScript 6 is installed through the `@typescript/typescript6` alias (binary `tsc6`), because `vue-tsc` does not support TypeScript 7 yet.
+- Quality gate: `pnpm check` (ESLint with package-boundary rules, Prettier, typecheck, Vitest, build). See [`docs/engineering-standards.md`](docs/engineering-standards.md).
 
 ## Working with AI agents (spec-driven development)
 

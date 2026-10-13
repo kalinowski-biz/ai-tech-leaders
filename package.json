@@ -11,6 +11,13 @@
     "build": "pnpm --filter @tripsalesagent/app build",
     "preview": "pnpm --filter @tripsalesagent/app preview",
     "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:migration:create": "pnpm --filter @tripsalesagent/database migration:create",
@@ -19,7 +26,13 @@
     "db:migration:pending": "pnpm --filter @tripsalesagent/database migration:pending"
   },
   "devDependencies": {
+    "@nuxt/eslint-config": "^1.17.0",
     "@types/node": "^26.6.5",
-    "typescript": "npm:@typescript/typescript6@^6.0.2"
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.4"
   }
 }
