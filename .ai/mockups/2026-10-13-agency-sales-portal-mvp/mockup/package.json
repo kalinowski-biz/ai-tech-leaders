@@ -1,0 +1,9 @@
+{
+  "name": "agency-sales-portal-mockup",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "esbuild src/main.ts --bundle --format=iife --target=es2022 --outfile=dist/app.js"
+  }
+}
