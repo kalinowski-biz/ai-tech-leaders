@@ -2,7 +2,13 @@ packages:
   - packages/*
 
 allowBuilds:
+  # Ships prebuilt binaries for every platform in bin/; the download script is not needed.
+  agent-browser: false
+  # Optional native speed-ups of ssh2 (Docker over SSH, unused by Testcontainers here).
+  cpu-features: false
   esbuild: true
+  protobufjs: false
+  ssh2: false
   # Prebuilt native binary ships via optional deps; its postinstall is not needed.
   unrs-resolver: false
 

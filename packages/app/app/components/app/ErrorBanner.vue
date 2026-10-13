@@ -2,6 +2,7 @@
 import { CircleAlertIcon } from '@lucide/vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import type { ApiError } from '~/utils/api-error'
+import { apiErrorMessage } from '~/utils/messages'
 
 /**
  * The only error renderer (02 §1.1–1.2): Polish message chosen by code/status,

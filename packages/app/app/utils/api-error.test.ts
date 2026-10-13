@@ -50,7 +50,46 @@ describe('toApiError', () => {
     log.mockRestore()
   })
 
+  it('mirrors the h3 error shape, so it survives useAsyncData and SSR payloads', () => {
+    const error = new ApiError(422, 'VALIDATION_FAILED', 'Invalid.', [{ field: 'nip', code: 'invalid_nip' }])
+    expect(error.statusCode).toBe(422)
+    expect(error.data).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: 'Invalid.',
+      fields: [{ field: 'nip', code: 'invalid_nip' }],
+    })
+    expect(new ApiError(404, 'X', 'y').data).toEqual({ code: 'X', message: 'y' })
+    expect(new ApiError(404, 'X', 'y').isVersionConflict).toBe(false)
+  })
+
+  it('returns an ApiError unchanged', () => {
+    const original = new ApiError(403, 'FORBIDDEN', 'No.')
+    expect(toApiError(original)).toBe(original)
+  })
+
+  it('reads an unwrapped error body and a `status` field', () => {
+    const error = toApiError({ status: 410, data: { code: 'QUOTE_EXPIRED', message: 'Expired.' } })
+    expect([error.status, error.code, error.fields]).toEqual([410, 'QUOTE_EXPIRED', []])
+  })
+
+  it('keeps the status of a failed request without our body', () => {
+    const error = toApiError({ statusCode: 502, data: '<html>Bad gateway</html>' })
+    expect([error.status, error.code]).toEqual([502, 'UNKNOWN_ERROR'])
+  })
+
+  it('treats a thrown null as a client error', () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(toApiError(null).code).toBe('CLIENT_ERROR')
+    log.mockRestore()
+  })
+
   it('falls back to the status message for unknown codes', () => {
     expect(apiErrorMessage(new ApiError(403, 'SOMETHING', 'x'))).toBe('Nie masz dostępu do tego zasobu.')
+  })
+
+  it('falls back to a generic message for unknown codes and statuses', () => {
+    expect(apiErrorMessage(new ApiError(500, 'INTERNAL_ERROR', 'x'))).toBe(
+      'Nie udało się połączyć z serwerem. Spróbuj ponownie za chwilę.',
+    )
   })
 })

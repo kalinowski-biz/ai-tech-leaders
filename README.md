@@ -20,6 +20,9 @@ pnpm dev                      # http://localhost:3000  (admin demo: /admin, heal
 | --- | --- |
 | `pnpm dev` / `build` / `preview` | Run, build and preview the Nuxt app (`packages/app`). |
 | `pnpm typecheck` | `tsc6` for `core` and `database`, `nuxt typecheck` for the app. |
+| `pnpm test` / `test:coverage` | Unit tests (Vitest; components in the Nuxt runtime) / with the 100 % coverage gate. |
+| `pnpm test:integration` | Build, then run database and browser tests: Testcontainers PostgreSQL + agent-browser. Needs Docker (or `TEST_DATABASE_URL`). |
+| `pnpm check` | Lint, format check, typecheck, unit tests with coverage, build – what CI runs on every PR. |
 | `pnpm db:up` / `db:down` | Start / stop the local PostgreSQL container. |
 | `pnpm db:migration:create` | Generate a migration from entity changes (`--blank` for an empty one). |
 | `pnpm db:migration:up` / `down` / `pending` | Apply, revert or list migrations. |
@@ -111,7 +114,7 @@ Tailwind v4 is wired through the `@tailwindcss/vite` plugin (`app/assets/css/tai
 
 - One `.env` at the **repo root** serves both the Nuxt app (`nuxt dev --dotenv ../../.env`) and the MikroORM CLI. In production, provide real environment variables.
 - TypeScript 6 is installed through the `@typescript/typescript6` alias (binary `tsc6`), because `vue-tsc` does not support TypeScript 7 yet.
-- Quality gate: `pnpm check` (ESLint with package-boundary rules, Prettier, typecheck, Vitest, build). See [`docs/engineering-standards.md`](docs/engineering-standards.md).
+- Quality gate: `pnpm check` (ESLint with package-boundary rules, Prettier, typecheck, Vitest with a 100 % coverage gate, build) and `pnpm test:integration` (Testcontainers + agent-browser). GitHub Actions runs both on every pull request (`.github/workflows/ci.yml`). See [`docs/engineering-standards.md`](docs/engineering-standards.md).
 
 ## Working with AI agents (spec-driven development)
 
