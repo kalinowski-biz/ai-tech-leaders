@@ -6,7 +6,16 @@ A web application for travel sales, built as a TypeScript monorepo on **Nuxt + V
 
 ## Quick start
 
-Requirements: Node.js >= 22, pnpm 11 (`corepack enable`), Docker (or any PostgreSQL).
+Requirements: Node.js >= 22, pnpm 11 (`corepack enable`), Docker with the Compose plugin (or any PostgreSQL).
+
+```bash
+npm run setup                 # install, create .env, start PostgreSQL, apply migrations
+pnpm dev                      # http://localhost:3000  (admin demo: /admin, health: /api/v1/health)
+```
+
+`npm run setup` (or `pnpm run setup` – **not** `pnpm setup`, which is a built-in pnpm command) runs the manual steps below and is safe to re-run: it keeps an existing `.env`, skips starting the database when the `db` container is already running, and applies only pending migrations. To use your own PostgreSQL instead of Docker, create `.env` with your `DATABASE_URL` first – the installer then skips the container. It does not start the dev server. On Windows, run it inside WSL (it calls `pnpm` and `docker` without a shell).
+
+**Manual setup** (the same steps by hand):
 
 ```bash
 pnpm install
@@ -18,8 +27,9 @@ pnpm dev                      # http://localhost:3000  (admin demo: /admin, heal
 
 | Script | What it does |
 | --- | --- |
+| `npm run setup` | One-command, re-runnable local setup (`scripts/setup.mjs`): install, `.env`, database, migrations. |
 | `pnpm dev` / `build` / `preview` | Run, build and preview the Nuxt app (`packages/app`). |
-| `pnpm typecheck` | `tsc6` for `core` and `database`, `nuxt typecheck` for the app. |
+| `pnpm typecheck` | `tsc6` for `scripts/` (tests of the setup script), `core` and `database`, `nuxt typecheck` for the app. |
 | `pnpm test` / `test:coverage` | Unit tests (Vitest; components in the Nuxt runtime) / with the 100 % coverage gate. |
 | `pnpm test:integration` | Build, then run database and browser tests: Testcontainers PostgreSQL + agent-browser. Needs Docker (or `TEST_DATABASE_URL`). |
 | `pnpm check` | Lint, format check, typecheck, unit tests with coverage, build – what CI runs on every PR. |

@@ -100,5 +100,14 @@ export default createConfigForNuxt({
         'vue/require-default-prop': 'off',
       },
     },
+    {
+      // The TS rule misreads plain JS (espree) scopes: every used variable is "only used as a type".
+      name: 'tripsalesagent/quality/js',
+      files: ['**/*.{js,mjs,cjs}'],
+      rules: {
+        '@typescript-eslint/no-unused-vars': 'off',
+        'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      },
+    },
     prettier,
   )

@@ -1,0 +1,17 @@
+{
+  // Typechecks the tests of the dependency-free setup scripts (`pnpm typecheck`). The `.mjs`
+  // sources are plain JS: `allowJs` lets the tests import them, without checking the JS itself.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "**/*.mjs"]
+}

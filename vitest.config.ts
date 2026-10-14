@@ -15,6 +15,7 @@ const APP_ROOT = fileURLToPath(new URL('packages/app', import.meta.url))
 export default defineConfig({
   test: {
     projects: [
+      { test: { name: 'scripts', environment: 'node', include: ['scripts/**/*.test.ts'] } },
       { test: { name: 'core', environment: 'node', include: ['packages/core/src/**/*.test.ts'] } },
       { test: { name: 'database', environment: 'node', include: ['packages/database/src/**/*.test.ts'] } },
       {
@@ -43,6 +44,7 @@ export default defineConfig({
       provider: 'v8',
       // Every hand-written source file counts, tested or not (AGENTS.md: 100 % unit coverage).
       include: [
+        'scripts/**/*.mjs',
         'packages/core/src/**/*.ts',
         'packages/database/src/**/*.ts',
         'packages/app/{app,server,shared}/**/*.{ts,vue}',
