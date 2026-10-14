@@ -23,6 +23,7 @@ Detailed entries live in [`lessons/`](lessons/) as `YYYY-MM-DD-slug.md`. When yo
 
 <!-- Format: - [Title](lessons/YYYY-MM-DD-slug.md) – one-sentence takeaway -->
 
+- [`@typescript-eslint/no-unused-vars` misfires on plain JS files](lessons/2026-10-14-eslint-ts-unused-vars-on-js.md) – on espree-parsed `.js`/`.mjs` every used variable is "only used as a type"; JS files use core `no-unused-vars` (`tripsalesagent/quality/js`).
 - [om-* skills don't file incidental bugs found during implementation](lessons/2026-10-13-om-skills-incidental-bugs-not-filed.md) – only `om-auto-fix-pr`/`om-pr-autopilot` file deferred review findings; everything else drops them, so file them yourself via `om-prepare-issue`.
 - [om-* skills need a restart; local `gh` is too old](lessons/2026-10-13-om-skills-and-old-gh-cli.md) – skills installed mid-session appear only in a new Claude Code process; `gh 2.4` lacks `gh label`, use `gh api` and upgrade gh to >= 2.82.1.
 - [Unit-testing Nuxt components and composables: gotchas](lessons/2026-10-13-nuxt-unit-test-gotchas.md) – `$fetch` retries GET on 503, `useAsyncData` caches per key, auto-unmount, and how to keep `.vue` branch coverage reachable.
