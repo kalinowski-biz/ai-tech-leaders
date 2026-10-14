@@ -10,10 +10,10 @@ const SKIPPED = Symbol('skipped')
 /** A problem the user has to fix; reported as a message, not a stack trace. */
 export class SetupError extends Error {}
 
-/** `DATABASE_URL` from a dotenv text, or undefined when it is not set. */
+/** `DATABASE_URL` from a dotenv text, unquoted like `process.loadEnvFile` does; undefined when it is not set. */
 export function databaseUrl(dotenv) {
   const match = /^DATABASE_URL=(.*)$/m.exec(dotenv)
-  return match ? match[1].trim() : undefined
+  return match ? match[1].trim().replace(/^(['"])(.*)\1$/, '$2') : undefined
 }
 
 /** Runs every step; returns the process exit code. */
@@ -59,7 +59,9 @@ function findPnpm(sys) {
       ? ['corepack', 'pnpm']
       : undefined
   if (!prefix)
-    throw new SetupError('pnpm was not found. Run `corepack enable` (or install pnpm 11) and re-run.')
+    throw new SetupError(
+      'pnpm was not found. Install pnpm 11 (https://pnpm.io/installation) or, on Node.js 22–24, run `corepack enable`, and re-run.',
+    )
   return (...args) => {
     const [command, ...rest] = [...prefix, ...args]
     if (!sys.run(command, rest))
@@ -81,7 +83,8 @@ function startDatabase(sys, pnpm) {
   const running = sys.capture('docker', ['compose', 'ps', '--status', 'running', '--services'])
   if (running === undefined)
     throw new SetupError('Docker is not running. Start the Docker daemon and re-run.')
-  if (running.split('\n').includes('db')) return skip('the db container is already running')
-  // `--wait` blocks until the healthcheck passes, so migrations never race the container start.
+  // Always `--wait`: it blocks until the healthcheck passes (a no-op for a healthy container),
+  // so migrations never race a container that is running but still starting.
   pnpm('db:up', '--wait')
+  if (running.split('\n').includes('db')) return skip('the db container is already running')
 }

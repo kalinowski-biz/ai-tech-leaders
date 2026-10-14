@@ -25,11 +25,19 @@ Issue #9: `npm run setup` performs the README Quick start steps (install, `.env`
 - README Quick start: installer first, manual steps kept as "Manual setup"; note on `pnpm setup` being a pnpm built-in. AGENTS.md command list gained `npm run setup`.
 - Smoke test (no Docker/Compose in this WSL): run 1 created `.env` and stopped with the Compose hint, exit 1; run 2 skipped `.env`. With `.env` pointing at a throwaway PostgreSQL 14 (TCP-only, scratchpad): two runs both exit 0, the second skipping `.env` and the container; migrations succeeded (repo has none yet). Temp DB and `.env` removed afterwards.
 
+- Review (PR #10, `om-code-review`, approve with 3 minors + 2 nits); the maintainer asked to fix all of them:
+  - quoted `DATABASE_URL` is unquoted like `process.loadEnvFile` does;
+  - the Compose path always runs `pnpm db:up --wait` (no-op on a healthy container), so migrations never race a container that is still starting;
+  - pnpm hint no longer assumes corepack (not bundled from Node 25);
+  - new `scripts/tsconfig.json` typechecked by `pnpm typecheck` (`tsc6 -p scripts`) – it immediately caught a bad `as NodeJS.WriteStream` cast in a test, fixed with a JSDoc type on `createSystem`;
+  - README says Windows users run the installer in WSL.
+- Docker became available mid-run (see the WSL Docker lesson). Re-run of `npm run setup` against the maintainer's running `db` container: skips `.env` and container, migrations OK, exit 0, `.env` byte-identical. A fresh container start was not exercised (would have meant stopping the maintainer's container).
+
 ## Result
 
-Files: `scripts/setup.mjs`, `scripts/setup.test.ts`, `scripts/setup/setup.mjs`, `scripts/setup/setup.test.ts`, `scripts/setup/system.mjs`, `scripts/setup/system.test.ts`, `package.json`, `vitest.config.ts`, `eslint.config.mjs`, `README.md`, `AGENTS.md`.
+Files: `scripts/tsconfig.json`, `scripts/setup.mjs`, `scripts/setup.test.ts`, `scripts/setup/setup.mjs`, `scripts/setup/setup.test.ts`, `scripts/setup/system.mjs`, `scripts/setup/system.test.ts`, `package.json`, `vitest.config.ts`, `eslint.config.mjs`, `README.md`, `AGENTS.md`.
 Validation gate: `pnpm lint`, `format:check`, `typecheck`, `test:coverage` (100 %), `build` – all green.
-Not verified locally: the Docker path (`docker compose ps` / `pnpm db:up --wait`) – no Docker daemon or Compose plugin in this environment; covered by unit tests only. No commit/PR yet (next: `om-open-pr`).
+Docker re-run path verified on a live container; the fresh-container start (`pnpm db:up --wait` on a stopped container) is covered by unit tests only. PR #10.
 
 ## Lessons
 

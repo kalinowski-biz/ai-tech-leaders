@@ -66,7 +66,7 @@ describe('runSetup', () => {
 
     expect(runSetup(sys)).toBe(0)
     expect(fs['.env']).toBe(env)
-    expect(ran).toEqual(['pnpm install', 'pnpm db:migration:up'])
+    expect(ran).toEqual(['pnpm install', 'pnpm db:up --wait', 'pnpm db:migration:up'])
     expect(output()).toContain('↷ Create .env from .env.example: skipped – .env already exists')
     expect(output()).toContain('↷ Start the local PostgreSQL: skipped – the db container is already running')
   })
@@ -80,6 +80,14 @@ describe('runSetup', () => {
     expect(runSetup(sys)).toBe(0)
     expect(ran).toEqual(['pnpm install', 'pnpm db:migration:up'])
     expect(output()).toContain('skipped – DATABASE_URL in .env points at your own PostgreSQL')
+  })
+
+  it('treats a quoted default DATABASE_URL as the docker-compose database', () => {
+    const quoted = EXAMPLE.replace(/=(postgresql:\S+)/, '="$1"')
+    const { sys, ran } = fakeSystem({ files: { '.env': quoted }, outputs: TOOLS })
+
+    expect(runSetup(sys)).toBe(0)
+    expect(ran).toContain('pnpm db:up --wait')
   })
 
   it('uses docker-compose when .env has no DATABASE_URL', () => {
@@ -103,7 +111,7 @@ describe('runSetup', () => {
       { nodeVersion: '20.11.1', outputs: TOOLS },
       'Node.js >= 22 is required, found 20.11.1.',
     ],
-    ['neither pnpm nor corepack exists', { outputs: {} }, 'pnpm was not found. Run `corepack enable`'],
+    ['neither pnpm nor corepack exists', { outputs: {} }, 'pnpm was not found. Install pnpm 11'],
     [
       'Docker Compose is missing',
       { outputs: { 'pnpm --version': '11.25.0\n' } },
@@ -149,6 +157,9 @@ describe('runSetup', () => {
 describe('databaseUrl', () => {
   it('reads DATABASE_URL from a dotenv text', () => {
     expect(databaseUrl('A=1\nDATABASE_URL=postgresql://x/y \n')).toBe('postgresql://x/y')
+    expect(databaseUrl('DATABASE_URL="postgresql://x/y"\n')).toBe('postgresql://x/y')
+    expect(databaseUrl("DATABASE_URL='postgresql://x/y'\n")).toBe('postgresql://x/y')
+    expect(databaseUrl('DATABASE_URL="postgresql://x/y\'\n')).toBe('"postgresql://x/y\'')
     expect(databaseUrl('# DATABASE_URL=postgresql://x/y\n')).toBeUndefined()
   })
 })

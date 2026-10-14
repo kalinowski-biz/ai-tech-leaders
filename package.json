@@ -11,7 +11,7 @@
     "dev": "pnpm --filter @tripsalesagent/app dev",
     "build": "pnpm --filter @tripsalesagent/app build",
     "preview": "pnpm --filter @tripsalesagent/app preview",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "tsc6 -p scripts && pnpm -r typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

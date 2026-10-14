@@ -44,7 +44,7 @@ describe('createSystem', () => {
 
   it('writes log lines to its output', () => {
     let written = ''
-    const sys = createSystem(tmpdir(), { write: (text: string) => (written += text) } as NodeJS.WriteStream)
+    const sys = createSystem(tmpdir(), { write: (text: string) => (written += text) })
 
     sys.log('hello')
     expect(written).toBe('hello\n')

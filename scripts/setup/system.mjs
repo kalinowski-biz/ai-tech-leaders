@@ -8,6 +8,9 @@ const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url))
 /**
  * The side effects `runSetup` needs, rooted at the repository. Commands run
  * without a shell; a missing binary counts as a failed command.
+ *
+ * @param {string} [root]
+ * @param {{ write(text: string): unknown }} [out]
  */
 export function createSystem(root = REPO_ROOT, out = process.stdout) {
   return {

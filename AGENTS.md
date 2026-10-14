@@ -114,7 +114,7 @@ npm run setup               # first-time / re-runnable local setup (scripts/setu
 pnpm install                # install (runs `nuxt prepare`)
 pnpm dev                    # Nuxt dev server (reads the repo-root .env)
 pnpm build                  # production build
-pnpm typecheck              # tsc for packages + nuxt typecheck (vue-tsc) for the app
+pnpm typecheck              # tsc for scripts/ and packages + nuxt typecheck (vue-tsc) for the app
 pnpm lint / lint:fix        # ESLint (incl. package boundaries)
 pnpm format / format:check  # Prettier
 pnpm test / test:watch      # Vitest unit tests (projects: core, database, app, app-nuxt)
